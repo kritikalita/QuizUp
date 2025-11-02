@@ -49,7 +49,6 @@ public class ProfileController {
         }
     }
 
-    // --- ADD THIS NEW ENDPOINT ---
     @PostMapping("/me/picture")
     public ResponseEntity<?> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
         try {
@@ -68,5 +67,18 @@ public class ProfileController {
             return ResponseEntity.badRequest().body("Failed to upload profile picture: " + e.getMessage());
         }
     }
-    // --- END ADDITION ---
+
+    @PutMapping("/me/country-code")
+    public ResponseEntity<?> updateMyCountryCode(@RequestBody Map<String, String> payload) {
+        String countryCode = payload.get("countryCode");
+        if (countryCode == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "countryCode field is missing."));
+        }
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        profileService.updateCountryCode(username, countryCode);
+
+        return ResponseEntity.ok(Map.of("message", "Country updated successfully!", "countryCode", countryCode));
+    }
+
 }

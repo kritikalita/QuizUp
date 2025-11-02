@@ -67,6 +67,7 @@ public class ProfileService {
         profileDTO.setFollowers(followerList);
         profileDTO.setFollowing(followingList);
         profileDTO.setProfilePictureUrl(profileUser.getProfilePictureUrl());
+        profileDTO.setCountryCode(profileUser.getCountryCode());
 
         List<UserTopicProgress> progressList = progressRepository.findByUser(profileUser);
         List<UserTopicProgressDTO> progressDTOs = progressList.stream()
@@ -92,7 +93,6 @@ public class ProfileService {
                 .collect(Collectors.toList());
     }
 
-    // --- THIS METHOD WAS MISSING ---
     @Transactional
     public void updateProfilePicture(String username, String fileUrl) {
         QuizUser user = userRepository.findByUsername(username)
@@ -100,5 +100,14 @@ public class ProfileService {
         user.setProfilePictureUrl(fileUrl);
         userRepository.save(user);
     }
-    // --- END OF MISSING METHOD ---
+
+    @Transactional
+    public void updateCountryCode(String username, String countryCode) {
+        QuizUser user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        user.setCountryCode(countryCode);
+        userRepository.save(user);
+    }
+
 }

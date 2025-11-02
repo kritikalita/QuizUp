@@ -4,6 +4,11 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import TopNavBar from './TopNavBar';
 import ChatList from './ChatList';
+// --- NEW IMPORTS ---
+import SettingsPanel from './SettingsPanel'; // Our new component
+import ReactCountryFlag from 'react-country-flag'; // For the profile
+import countryList from 'country-list'; // To get country name from code
+// --- END NEW IMPORTS ---
 
 // --- Placeholder Icons ---
 const UserPlaceholderIcon = () => (
@@ -37,23 +42,7 @@ const UserMinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h
 const ChatBubbleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9z" clipRule="evenodd" /></svg>;
 const LocationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>;
 
-// --- Achievement Icons ---
-const FirstQuizIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414l-3-3z" clipRule="evenodd" /></svg>;
-const PerfectScoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
-const JavaExpertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" /></svg>;
-const SocialIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a6 6 0 00-12 0v3h12z" /></svg>;
-const VeteranIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 2a1 1 0 00-1 1v1H3a1 1 0 000 2h1v1a1 1 0 001 1h12a1 1 0 001-1V6h1a1 1 0 100-2h-1V3a1 1 0 00-1-1H5zM4 9a1 1 0 00-1 1v7a1 1 0 001 1h12a1 1 0 001-1v-7a1 1 0 00-1-1H4z" clipRule="evenodd" /></svg>;
-
-// --- Achievement Details Map ---
-// Added positioning for the new profile view
-const ACHIEVEMENT_DETAILS = {
-    "FIRST_QUIZ": { name: "First Step", description: "Completed your first quiz!", icon: <FirstQuizIcon />, color: "bg-green-400", text: "text-white", position: "top-0 -left-1" },
-    "QUIZ_VETERAN": { name: "Quiz Veteran", description: "Completed 10 quizzes!", icon: <VeteranIcon />, color: "bg-blue-400", text: "text-white", position: "top-0 -right-1" },
-    "PERFECT_SCORE": { name: "Perfectionist", description: "Achieved a 100% score on a quiz!", icon: <PerfectScoreIcon />, color: "bg-yellow-400", text: "text-white", position: "bottom-0 -left-1" },
-    "JAVA_NOVICE": { name: "Java Novice", description: "Completed your first Java quiz!", icon: <JavaExpertIcon />, color: "bg-orange-400", text: "text-white", position: "bottom-0 -right-1" },
-    "JAVA_EXPERT": { name: "Java Expert", description: "Scored 90%+ on a Java quiz!", icon: <JavaExpertIcon />, color: "bg-red-500", text: "text-white", position: "top-0 -left-1" },
-    "SOCIAL_BUTTERFLY": { name: "Social Butterfly", description: "Followed 5 users!", icon: <SocialIcon />, color: "bg-cyan-400", text: "text-white", position: "top-0 -right-1" },
-};
+// --- Achievement Icons & DetailsMap Removed ---
 
 // --- XP & Leveling Helper ---
 const xpFormulas = {
@@ -117,7 +106,6 @@ function App() {
     const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
     // Toast State
-    const [newAchievementToast, setNewAchievementToast] = useState([]);
     const [newTitleToast, setNewTitleToast] = useState([]);
 
     // General UI State
@@ -129,6 +117,9 @@ function App() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadError, setUploadError] = useState(null);
     const fileInputRef = useRef(null);
+
+    // --- NEW STATE for Settings Panel ---
+    const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
 
     // --- API Error Handler ---
@@ -293,16 +284,6 @@ function App() {
         }
     }, [showChat, activeChatUser]);
 
-    // useEffect for Achievement Toast
-    useEffect(() => {
-        if (newAchievementToast.length > 0) {
-            const timer = setTimeout(() => {
-                setNewAchievementToast([]);
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [newAchievementToast]);
-
     // useEffect for Title Toast
     useEffect(() => {
         if (newTitleToast.length > 0) {
@@ -374,9 +355,6 @@ function App() {
             setShowChat(false); setShowChatList(false); setActiveChatUser(null);
             fetchMyProfile();
 
-            if (resultData.newAchievements && resultData.newAchievements.length > 0) {
-                setNewAchievementToast(resultData.newAchievements);
-            }
             if (resultData.newTitles && resultData.newTitles.length > 0) {
                 setNewTitleToast(resultData.newTitles);
             }
@@ -447,6 +425,31 @@ function App() {
         }
     }, [handleApiError, fileInputRef]);
 
+    // --- UPDATED HANDLER for Country ---
+    const handleCountryCodeUpdate = async (countryCode) => {
+        setIsSubmitting(true); // Use existing loading state
+        setError(null);
+        setMessage(null);
+
+        try {
+            // Call the new endpoint we created
+            const response = await api.put('/api/profile/me/country-code', { countryCode: countryCode });
+
+            setMessage(response.data.message || "Country updated!");
+
+            // Manually update the profile data in state to reflect the change
+            setMyProfileData(prev => ({ ...prev, countryCode: response.data.countryCode }));
+            setShowSettingsPanel(false); // Close the panel on success
+
+        } catch (err) {
+            handleApiError(err, 'Failed to update country.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    // --- END OF UPDATE ---
+
+
     // --- Derive chat partners from chatMessages ---
     const chatPartners = useMemo(() => {
         return Object.keys(chatMessages).sort();
@@ -472,40 +475,15 @@ function App() {
 
     // --- RENDER FUNCTIONS ---
 
-    // --- Helper for rendering achievements ---
-    // This helper is now simpler, just for the toast
-    const renderAchievementBadges = (achievementCodes) => {
-        if (!achievementCodes || achievementCodes.length === 0) {
-            return <p className="text-sm text-gray-500 text-center py-2">No achievements yet.</p>;
-        }
-
-        return (
-            <div className="flex flex-wrap gap-3 justify-center">
-                {achievementCodes.map(code => {
-                    const details = ACHIEVEMENT_DETAILS[code];
-                    if (!details) return null;
-
-                    return (
-                        <div
-                            key={code}
-                            className={`flex items-center p-2 rounded-lg border shadow-sm ${details.color} ${details.text.replace('text-', 'border-')}`}
-                            title={`${details.name}: ${details.description}`}
-                        >
-                            <span className={details.text}>{React.cloneElement(details.icon, { className: "h-6 w-6" })}</span>
-                            <span className={`ml-2 text-sm font-semibold ${details.text}`}>{details.name}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    };
-
     // --- renderDashboard (My Profile) ---
-    // Kept the original dashboard layout for "My Profile"
+    // This is updated to include country AND the gold title banner
     const renderDashboard = () => {
         const profile = myProfileData;
         const displayAverageScore = typeof profile?.averageScore === 'number' ? profile.averageScore.toFixed(1) : 'N/A';
         const averageScoreValue = typeof profile?.averageScore === 'number' ? profile.averageScore : 0;
+
+        // --- ADD THIS LINE TO GET THE BEST TITLE ---
+        const bestTitle = profile?.topicProgress?.find(p => p.currentTitle)?.currentTitle || null;
 
         const renderFollowList = (listTitle, listItems, emptyMessage) => (
             <div className="w-full animate-fade-in">
@@ -535,26 +513,70 @@ function App() {
                             disabled={isLoading}
                         />
                         <label htmlFor="profilePicInput" className="cursor-pointer group relative block">
-                            {profile && profile.profilePictureUrl ? (
-                                <img
-                                    src={profile.profilePictureUrl}
-                                    alt="Profile"
-                                    className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg object-cover"
-                                />
-                            ) : (
-                                <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
-                                    <UserPlaceholderIcon />
-                                </div>
-                            )}
+
+                            {/* --- Profile Picture & Badges Container --- */}
+                            <div className="relative w-32 h-32 mx-auto">
+                                {profile && profile.profilePictureUrl ? (
+                                    <img
+                                        src={profile.profilePictureUrl}
+                                        alt="Profile"
+                                        className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
+                                        <UserPlaceholderIcon />
+                                    </div>
+                                )}
+
+                                {/* --- ACHIEVEMENT BADGES REMOVED --- */}
+                            </div>
+
+                            {/* --- Upload Overlay --- */}
                             <div className="absolute inset-0 w-32 h-32 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all duration-200">
                                 <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                             </div>
                         </label>
                     </div>
 
-                    <h1 className="text-3xl font-bold text-gray-800 capitalize relative z-10">{loggedInUsername || 'User'}</h1>
+                    {/* --- GOLD BANNER ADDED HERE --- */}
+                    {bestTitle && (
+                        <div className="mt-4 max-w-sm mx-auto">
+                            <div className="p-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-center rounded-lg shadow-lg relative border-2 border-yellow-200/50">
+                                <span className="block text-xs font-bold text-yellow-900 uppercase tracking-wider">Best in</span>
+                                <h3 className="text-lg font-bold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.4)' }}>
+                                    {bestTitle}
+                                </h3>
+                            </div>
+                        </div>
+                    )}
+                    {/* --- END OF BANNER --- */}
+
+                    {/* Added margin-top to space it from the banner */}
+                    <h1 className="text-3xl font-bold text-gray-800 capitalize relative z-10 mt-6">{loggedInUsername || 'User'}</h1>
                     <p className="text-sm text-gray-500 relative z-10">Quiz Enthusiast</p>
+
+                    {/* --- COUNTRY & FLAG --- */}
+                    <p className="text-sm text-gray-500 mt-1 flex items-center justify-center gap-1.5 relative z-10">
+                        {profile?.countryCode ? (
+                            <>
+                                <ReactCountryFlag
+                                    countryCode={profile.countryCode}
+                                    svg
+                                    style={{ width: '1.25em', height: '1.25em' }}
+                                    title={countryList.getName(profile.countryCode)}
+                                />
+                                {countryList.getName(profile.countryCode) || 'Unknown Location'}
+                            </>
+                        ) : (
+                            <>
+                                <LocationIcon />
+                                {'Global'}
+                            </>
+                        )}
+                    </p>
+
                     {uploadError && <p className="text-red-600 text-xs text-center mt-2">{uploadError}</p>}
+
                     {/* Stats */}
                     {isLoadingProfile ? (<LoadingSpinner />)
                         : profile ? (
@@ -777,13 +799,6 @@ function App() {
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Quiz Completed!</h1>
                 <p className="text-md text-gray-600 mb-4 capitalize">Topic: {topic || selectedTopic || 'General'}</p>
 
-                {newAchievements && newAchievements.length > 0 && (
-                    <div className="my-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md mx-auto">
-                        <h4 className="text-lg font-semibold text-yellow-800 mb-3">New Achievements!</h4>
-                        {renderAchievementBadges(newAchievements)}
-                    </div>
-                )}
-
                 {newTitles && newTitles.length > 0 && (
                     <div className="my-6 p-4 bg-purple-50 border border-purple-200 rounded-lg max-w-md mx-auto">
                         <h4 className="text-lg font-semibold text-purple-800 mb-3">New Title Unlocked!</h4>
@@ -840,7 +855,7 @@ function App() {
     );
 
     // --- RENDER PROFILE (PUBLIC) ---
-    // This function is heavily redesigned to match the screenshot
+    // This function is redesigned to match the new screenshot
     const renderProfile = ({ profileData, title }) => {
 
         // --- Follow List (Modal) ---
@@ -867,81 +882,81 @@ function App() {
         );
 
         // --- Profile Data ---
-        const { username: profileUsername, totalQuizzesTaken, averageScore, followersCount, followingCount, isFollowedByCurrentUser, profilePictureUrl, achievements, topicProgress } = profileData;
+        const { username: profileUsername, totalQuizzesTaken, averageScore, followersCount, followingCount, isFollowedByCurrentUser, profilePictureUrl, topicProgress, countryCode } = profileData;
         const displayAverageScore = typeof averageScore === 'number' ? averageScore.toFixed(1) : 'N/A';
         const bestTitle = topicProgress?.find(p => p.currentTitle)?.currentTitle || null;
-        const profileAchievements = (achievements || []).slice(0, 4); // Get first 4 achievements
 
         return (
-            // Removed padding from main card, will apply to children
             <div className="w-full animate-fade-in -m-8">
 
-                {/* --- Profile Header (Cover, Pic, Info) --- */}
-                <div className="relative pb-4">
-                    {/* Cover Photo Placeholder */}
-                    <div className="h-40 bg-gray-300">
-                        <img
-                            src={`https://placehold.co/600x200/94a3b8/e2e8f0?text=${profileUsername}'s+Cover`}
-                            alt="Cover"
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+                {/* --- Dark Header Area --- */}
+                <div className="h-40 bg-gray-800" />
 
-                    {/* Profile Picture & Badges */}
-                    <div className="absolute top-24 left-1/2 -translate-x-1/2 w-32 h-32">
-                        <div className="relative w-32 h-32">
-                            {profilePictureUrl ? (
-                                <img
-                                    src={profilePictureUrl}
-                                    alt={profileUsername}
-                                    className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg object-cover"
-                                />
-                            ) : (
-                                <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
-                                    <UserPlaceholderIcon />
-                                </div>
-                            )}
+                {/* --- Main Profile Content --- */}
+                {/* This div is pulled up to overlap the dark header */}
+                <div className="relative w-full max-w-3xl mx-auto px-6 -mt-20">
 
-                            {/* Achievement Badges */}
-                            {profileAchievements.map(code => {
-                                const details = ACHIEVEMENT_DETAILS[code];
-                                if (!details) return null;
-                                return (
-                                    <div
-                                        key={code}
-                                        title={`${details.name}: ${details.description}`}
-                                        className={`absolute w-8 h-8 rounded-full ${details.color} ${details.text} ${details.position} flex items-center justify-center border-2 border-white shadow-md p-1`}
-                                    >
-                                        {details.icon}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-
-                    {/* User Info Text */}
-                    <div className="mt-20 text-center px-6">
-                        <h1 className="text-3xl font-bold text-gray-800 capitalize">{profileUsername}</h1>
-                        <p className="text-sm text-gray-500 mt-1">Member of Quiz App</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                            <LocationIcon />
-                            {/* Placeholder location */}
-                            Global
-                        </p>
-                        {/* Placeholder Last Active */}
-                        <p className="text-xs text-gray-400 mt-1">Last Active: 5 minutes ago</p>
+                    {/* Profile Picture */}
+                    <div className="relative w-32 h-32 mx-auto">
+                        {profilePictureUrl ? (
+                            <img
+                                src={profilePictureUrl}
+                                alt={profileUsername}
+                                className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg object-cover"
+                            />
+                        ) : (
+                            <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
+                                <UserPlaceholderIcon />
+                            </div>
+                        )}
+                        {/* Achievement badges are removed */}
                     </div>
 
                     {/* Best Title Banner */}
                     {bestTitle && (
-                        <div className="mt-4 mx-6 p-2 bg-yellow-400 text-yellow-900 font-semibold text-center rounded-lg shadow">
-                            <TrophyIcon />
-                            Best in {bestTitle}
+                        <div className="mt-4 max-w-sm mx-auto">
+                            <div className="p-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-center rounded-lg shadow-lg relative border-2 border-yellow-200/50">
+                                <span className="block text-xs font-bold text-yellow-900 uppercase tracking-wider">Best in</span>
+                                <h3 className="text-lg font-bold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.4)' }}>
+                                    {bestTitle}
+                                </h3>
+                            </div>
                         </div>
                     )}
 
+                    {/* User Info Text */}
+                    <div className="mt-6 text-center">
+                        {/* Username is removed from here to match the design */}
+                        <p className="text-sm text-gray-600 mt-1">
+                            Quiz Enthusiast
+                        </p>
+
+                        <p className="text-sm text-gray-500 mt-1 flex items-center justify-center gap-1.5">
+                            {countryCode ? (
+                                <>
+                                    <ReactCountryFlag
+                                        countryCode={countryCode}
+                                        svg
+                                        style={{ width: '1.25em', height: '1.25em' }}
+                                        title={countryList.getName(countryCode)}
+                                    />
+                                    {countryList.getName(countryCode) || 'Unknown Location'}
+                                </>
+                            ) : (
+                                <>
+                                    <LocationIcon />
+                                    {'Global'}
+                                </>
+                            )}
+                        </p>
+
+                        <p className="text-xs text-gray-400 mt-1">
+                            Last Active: 5 minutes ago
+                        </p>
+                    </div>
+
                     {/* Action Buttons */}
-                    <div className="mt-6 px-6 grid grid-cols-3 gap-3">
+                    <div className="mt-6 grid grid-cols-3 gap-3 max-w-md mx-auto">
                         <button
                             onClick={() => setQuizState('dashboard')}
                             className="flex items-center justify-center px-4 py-3 bg-accent text-white font-bold rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition duration-200"
@@ -950,90 +965,64 @@ function App() {
                             Play
                         </button>
 
+                        {/* This is the new Follow/Following button style */}
                         {isFollowedByCurrentUser ? (
                             <button onClick={() => handleUnfollow(profileUsername)} disabled={isSubmitting} className="flex items-center justify-center px-4 py-3 bg-gray-600 text-white font-bold rounded-lg shadow-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                                {isSubmitting ? <LoadingSpinner /> : <><UserMinusIcon /> Unfollow</>}
+                                {isSubmitting ? <LoadingSpinner /> : 'Following'}
                             </button>
                         ) : (
                             <button onClick={() => handleFollow(profileUsername)} disabled={isSubmitting} className="flex items-center justify-center px-4 py-3 bg-gray-600 text-white font-bold rounded-lg shadow-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                                {isSubmitting ? <LoadingSpinner /> : <><UserMinusIcon /> Follow</>}
+                                {isSubmitting ? <LoadingSpinner /> : 'Follow'}
                             </button>
                         )}
 
                         <button
                             onClick={() => { setActiveChatUser(profileUsername); setShowChat(true); setShowChatList(false); }}
                             disabled={!isChatConnected}
-                            className="flex items-center justify-center px-4 py-3 bg-secondary text-white font-bold rounded-lg shadow-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+                            className="flex items-center justify-center px-4 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
                         >
                             <ChatBubbleIcon />
                             Chat
                         </button>
                     </div>
-                </div>
 
-                {/* --- Statistics Section --- */}
-                <div className="bg-white p-6 border-t border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Statistics</h2>
-                    <div className="space-y-4">
-                        {/* Adapted stats: Quizzes and Avg Score */}
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="font-medium text-gray-600">Total Quizzes Taken</span>
-                            <span className="font-bold text-lg text-gray-800">{totalQuizzesTaken ?? 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="font-medium text-gray-600">Followers</span>
-                            <span className="font-bold text-lg text-gray-800">{followersCount ?? 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="font-medium text-gray-600">Following</span>
-                            <span className="font-bold text-lg text-gray-800">{followingCount ?? 0}</span>
-                        </div>
+                    {/* Statistics Section */}
+                    {/* This is no longer in a white card */}
+                    <div className="mt-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Statistics</h2>
+                        <div className="space-y-4">
 
-                        {/* Average Score as a progress bar */}
-                        <div>
-                            <div className="flex justify-between items-center text-sm mb-1">
-                                <span className="font-medium text-gray-600">Average Score</span>
-                                <span className="font-bold text-lg text-green-600">{displayAverageScore}%</span>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-medium text-gray-600">Total Quizzes Taken</span>
+                                <span className="font-bold text-lg text-gray-800">{totalQuizzesTaken ?? 0}</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${averageScore}%` }}></div>
+
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-medium text-gray-600">Followers</span>
+                                <span className="font-bold text-lg text-gray-800">{followersCount ?? 0}</span>
                             </div>
+
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-medium text-gray-600">Following</span>
+                                <span className="font-bold text-lg text-gray-800">{followingCount ?? 0}</span>
+                            </div>
+
+                            {/* Average Score is now the last item */}
+                            <div>
+                                <div className="flex justify-between items-center text-sm mb-1">
+                                    <span className="font-medium text-gray-600">Average Score</span>
+                                    <span className="font-bold text-lg text-green-600">{displayAverageScore}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${averageScore}%` }}></div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
-                </div>
 
-                {/* --- Topics Section --- */}
-                <div className="bg-white p-6 border-t border-gray-100">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-gray-800">Topics</h2>
-                        <button onClick={backToDashboard} className="text-sm font-semibold text-primary hover:text-primary-dark">SEE ALL</button>
-                    </div>
-                    {topicProgress && topicProgress.length > 0 ? (
-                        <div className="space-y-4 max-w-lg mx-auto">
-                            {topicProgress.sort((a, b) => b.xp - a.xp).slice(0, 3).map(prog => { // Show top 3 topics
-                                const xpInThis = prog.xp - prog.xpForCurrentLevel;
-                                const xpNeeded = prog.xpToNextLevel - prog.xpForCurrentLevel;
-                                const percent = (xpNeeded > 0) ? Math.floor((xpInThis / xpNeeded) * 100) : 0;
-                                return (
-                                    <div key={prog.topic} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <span className="font-bold text-primary capitalize">{prog.topic}</span>
-                                            <span className="text-sm font-semibold text-gray-700">
-                                                Level {prog.level}
-                                                {prog.currentTitle && <span className="text-xs text-yellow-600 ml-1">({prog.currentTitle})</span>}
-                                            </span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${percent}%` }}></div>
-                                        </div>
-                                        <p className="text-xs text-gray-500 text-right mt-1">{prog.xp} XP</p>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500 text-center py-2">No quiz progress yet.</p>
-                    )}
+                    {/* --- Topics Section is Removed --- */}
+
                 </div>
             </div>
         );
@@ -1071,28 +1060,7 @@ function App() {
     const renderNotificationToasts = () => {
         let toastContent = null;
 
-        if (newAchievementToast.length > 0) {
-            toastContent = (
-                <>
-                    <h4 className="text-lg font-semibold text-yellow-700 text-center mb-3">Achievement Unlocked!</h4>
-                    <div className="flex flex-col gap-2">
-                        {newAchievementToast.map(code => {
-                            const details = ACHIEVEMENT_DETAILS[code];
-                            if (!details) return null;
-                            return (
-                                <div key={code} className={`flex items-center p-2 rounded ${details.color}`}>
-                                    <span className={details.text}>{React.cloneElement(details.icon, { className: "h-6 w-6" })}</span>
-                                    <div className="ml-3">
-                                        <p className={`font-semibold text-sm ${details.text}`}>{details.name}</p>
-                                        <p className={`text-xs ${details.text.replace('700', '600')}`}>{details.description}</p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </>
-            );
-        } else if (newTitleToast.length > 0) {
+        if (newTitleToast.length > 0) {
             toastContent = (
                 <>
                     <h4 className="text-lg font-semibold text-purple-700 text-center mb-3">Title Unlocked!</h4>
@@ -1141,8 +1109,9 @@ function App() {
         <div className="min-h-screen bg-gray-100 font-sans">
             <TopNavBar
                 username={navTitle} // Pass the dynamic title instead of the logged-in user
-                onLogout={handleLogout} // Logout is still needed, though the button is hidden in the new nav
+                onLogout={handleLogout}
                 onSearchClick={() => { setQuizState('search'); setShowChatList(false); setShowChat(false); setSelectedTopic(null); }}
+                onSettingsClick={() => setShowSettingsPanel(true)} // <-- Pass the handler
                 onChatClick={toggleChatList}
                 chatNotifications={unreadMessagesCount}
             />
@@ -1185,6 +1154,16 @@ function App() {
             {renderChat()}
 
             {renderNotificationToasts()}
+
+            {/* --- RENDER THE NEW SETTINGS PANEL --- */}
+            <SettingsPanel
+                show={showSettingsPanel}
+                onClose={() => setShowSettingsPanel(false)}
+                currentCountryCode={myProfileData?.countryCode}
+                onSave={handleCountryCodeUpdate}
+                isSubmitting={isSubmitting}
+            />
+
         </div>
     );
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/quizapp/model/QuizUser.java
 package com.quizapp.model;
 
 import jakarta.persistence.*;
@@ -40,10 +39,8 @@ public class QuizUser implements UserDetails {
     @Column(nullable = true)
     private String profilePictureUrl;
 
-    // --- ADD THIS LINE ---
-    @Column(nullable = true) // Allow country to be null
-    private String country;
-    // --- END OF ADDITION ---
+    @Column(nullable = true) // Allow country code to be null
+    private String countryCode;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuizAttempt> attempts = new ArrayList<>();

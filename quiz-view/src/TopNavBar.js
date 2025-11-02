@@ -22,12 +22,12 @@ const ChatIcon = () => (
 );
 
 
-function TopNavBar({ username, onLogout, onSearchClick, onChatClick, chatNotifications = 0 }) {
+function TopNavBar({ username, onLogout, onSearchClick, onChatClick, onSettingsClick, chatNotifications = 0 }) {
     return (
         // Updated background to primary (red) and removed transparency/blur
         <nav className="fixed top-0 left-0 right-0 bg-primary text-white p-4 flex items-center justify-between shadow-md z-50">
             {/* Settings Icon */}
-            <button className="text-xl mr-4 opacity-90 hover:opacity-100 transition-opacity focus:outline-none" title="Settings (Placeholder)">
+            <button onClick={onSettingsClick} className="text-xl mr-4 opacity-90 hover:opacity-100 transition-opacity focus:outline-none" title="Settings">
                 <SettingsIcon />
             </button>
 
@@ -58,10 +58,11 @@ function TopNavBar({ username, onLogout, onSearchClick, onChatClick, chatNotific
                 </div>
 
                 {/* Logout Button (Hidden on this profile-centric nav, but kept logic) */}
-                {/* We hide logout on the main nav to match the screenshot, but you might want it elsewhere */}
-                {/* <button onClick={onLogout} className="bg-red-700 hover:bg-red-800 text-white font-bold py-1 px-3 rounded-md shadow-sm text-sm transition-colors ml-4 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-600 focus:ring-white">
+                <button
+                    onClick={onLogout}
+                    className="bg-red-700 hover:bg-red-800 text-white font-bold py-1 px-3 rounded-md shadow-sm text-sm transition-colors ml-4 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-600 focus:ring-white">
                     Logout
-                </button> */}
+                </button>
             </div>
         </nav>
     );

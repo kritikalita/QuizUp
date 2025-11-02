@@ -21,6 +21,7 @@ public class UserProfileDTO {
     private List<FollowUserDTO> followers;
     private List<FollowUserDTO> following;
     private String profilePictureUrl;
+    private String countryCode;
 
     private List<UserTopicProgressDTO> topicProgress;
 }
