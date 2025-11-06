@@ -38,11 +38,8 @@ const RankingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 
 // --- NEW Icons for Profile Page (matching screenshot) ---
 const PlayButtonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>;
-const UserMinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path d="M11 6a3 3 0 11-6 0 3 3 0 016 0zM14 17a6 6 0 00-12 0h12zM19 11a1 1 0 00-1-1h-4a1 1 0 100 2h4a1 1 0 001-1z" /></svg>;
 const ChatBubbleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9z" clipRule="evenodd" /></svg>;
 const LocationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>;
-
-// --- Achievement Icons & DetailsMap Removed ---
 
 // --- XP & Leveling Helper ---
 const xpFormulas = {
@@ -77,7 +74,7 @@ function App() {
     const [selectedTopic, setSelectedTopic] = useState(null);
     const [questions, setQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [selectedAnswers, setSelectedAnswers] = useState({});
+    const [selectedAnswers, setSelectedAnswers] = useState([]); // <-- CHANGE TO ARRAY
     const [quizResult, setQuizResult] = useState(null);
 
     const [quizState, setQuizState] = useState('dashboard');
@@ -103,12 +100,17 @@ function App() {
 
     // Leaderboard State
     const [leaderboard, setLeaderboard] = useState([]);
-    const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
     // Toast State
     const [newTitleToast, setNewTitleToast] = useState([]);
 
     // General UI State
+    // --- NEW QUIZ TIMER STATE ---
+    const [timer, setTimer] = useState(10);
+    const timerIntervalId = useRef(null); // <-- Use ref for interval
+    const questionStartTimeRef = useRef(null); // Use ref to avoid stale state in interval
+    // --- END NEW STATE ---
+
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -141,7 +143,7 @@ function App() {
         } else {
             console.error("Leaderboard specific error:", specificError);
         }
-        setIsLoading(false); setIsLoadingProfile(false); setIsLoadingTopics(false); setIsSubmitting(false); setIsLoadingLeaderboard(false);
+        setIsLoading(false); setIsLoadingProfile(false); setIsLoadingTopics(false); setIsSubmitting(false);
     }, [stompClient]);
 
     // --- Logout Handler ---
@@ -191,7 +193,6 @@ function App() {
             setLeaderboard([]);
             return;
         }
-        setIsLoadingLeaderboard(true);
         try {
             const response = await api.get(`/api/quiz/leaderboard/${encodeURIComponent(topicName)}?limit=10`);
             setLeaderboard(response.data || []);
@@ -199,8 +200,6 @@ function App() {
             console.error("Failed to load leaderboard for topic:", topicName, err);
             handleApiError(err, `Could not load leaderboard for ${topicName}.`);
             setLeaderboard([]);
-        } finally {
-            setIsLoadingLeaderboard(false);
         }
     }, [handleApiError]);
 
@@ -252,6 +251,84 @@ function App() {
         client.activate(); setStompClient(client);
     }, [loggedInUsername, stompClient?.active, onMessageReceived, handleLogout]);
 
+    // --- QUIZ LOGIC FUNCTIONS (MOVED TO TOP) ---
+
+    // --- MODIFIED handleSubmit ---
+    const handleSubmit = useCallback(async (finalAnswerPayload) => { // <-- Renamed param
+        setIsLoading(true); setError(null);
+        if (timerIntervalId.current) clearInterval(timerIntervalId.current);
+
+        // Combine the answers in state with the very last answer that triggered this submit
+        const finalAnswers = [...selectedAnswers, finalAnswerPayload]; // <-- Build final array
+
+        const submittedTopic = questions.length > 0 ? (questions[0]?.topic || selectedTopic || "Unknown") : "Unknown";
+        try {
+            const response = await api.post('/api/quiz/submit', finalAnswers); // <-- Send array
+            const resultData = response.data;
+
+            setQuizResult({ ...resultData, topic: submittedTopic });
+            setQuizState('finished');
+            setShowChat(false); setShowChatList(false); setActiveChatUser(null);
+            fetchMyProfile();
+
+            if (resultData.newTitles && resultData.newTitles.length > 0) {
+                setNewTitleToast(resultData.newTitles);
+            }
+
+        }
+        catch (err) { handleApiError(err, 'Failed to submit answers.'); }
+        finally { setIsLoading(false); }
+    }, [questions, selectedTopic, selectedAnswers, fetchMyProfile, handleApiError]); // <-- Updated dependencies
+
+    // --- NEW: This function handles a question timeout ---
+    const handleTimeout = useCallback(() => {
+        // We MUST use updaters here because this function is called
+        // from a stale closure inside setInterval.
+        setCurrentQuestionIndex(prevIndex => {
+            const q = questions[prevIndex];
+            if (!q) return prevIndex; // No change
+
+            const answerPayload = { questionId: q.id, answer: null, timeElapsed: 10 }; // <-- Add questionId
+
+            if (prevIndex === questions.length - 1) {
+                // Last question timed out, submit
+                handleSubmit(answerPayload); // <-- Pass final answer
+                return prevIndex; // No index change
+            } else {
+                // Record timeout and move to next question
+                setSelectedAnswers(prev => [...prev, answerPayload]); // <-- Add to array
+                return prevIndex + 1; // Move to next question
+            }
+        });
+    }, [questions, handleSubmit]); // No longer depends on handleNext or currentQuestionIndex
+
+    // --- MODIFIED: This function now handles selecting an answer AND moving next ---
+    const handleAnswerSelect = useCallback((option) => {
+        if (timerIntervalId.current) clearInterval(timerIntervalId.current); // <-- Use .current
+        const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
+
+        // Use updater form to avoid stale state
+        setCurrentQuestionIndex(prevIndex => {
+            const q = questions[prevIndex];
+            if (!q) return prevIndex;
+
+            const answerPayload = { questionId: q.id, answer: option, timeElapsed: elapsedSeconds }; // <-- Add questionId
+
+            if (prevIndex === questions.length - 1) {
+                // This is the last question, trigger submit
+                handleSubmit(answerPayload); // <-- Pass final answer
+                return prevIndex; // No index change
+            } else {
+                // Not the last question, save answer and move next
+                setSelectedAnswers(prev => [...prev, answerPayload]); // <-- Add to array
+                return prevIndex + 1; // Move to next question
+            }
+        });
+    }, [questions, handleSubmit]); // <-- Removed timerIntervalId and handleNext
+
+    // --- END OF QUIZ LOGIC FUNCTIONS ---
+
+
     // --- Main useEffect ---
     useEffect(() => {
         if (isAuthenticated && !loggedInUsername) {
@@ -294,6 +371,38 @@ function App() {
         }
     }, [newTitleToast]);
 
+    // --- NEW QUIZ TIMER useEffect (Moved to top level) ---
+    useEffect(() => {
+        // Only run this logic if we are in the quiz
+        if (quizState === 'in_progress' && questions.length > 0) {
+            setTimer(10); // Reset visual timer
+            questionStartTimeRef.current = Date.now(); // Record start time
+
+            if (timerIntervalId.current) clearInterval(timerIntervalId.current); // <-- Use .current
+
+            const newIntervalId = setInterval(() => {
+                const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
+                const remaining = 10 - elapsedSeconds;
+
+                setTimer(remaining);
+
+                if (remaining <= 0) {
+                    clearInterval(newIntervalId);
+                    handleTimeout(); // Trigger timeout logic
+                }
+            }, 100); // Check 10 times a second
+
+            timerIntervalId.current = newIntervalId; // <-- Use .current
+
+            // Cleanup function for THIS question
+            return () => clearInterval(newIntervalId);
+        } else {
+            // This is the cleanup for when we LEAVE the quiz
+            if (timerIntervalId.current) clearInterval(timerIntervalId.current); // <-- Use .current
+        }
+    }, [quizState, currentQuestionIndex, questions.length, handleTimeout]); // <-- Removed timerIntervalId
+
+
     // --- Auth Handlers ---
     const handleLogin = async (e) => {
         e.preventDefault(); setIsLoading(true); setError(null); setMessage(null);
@@ -325,7 +434,8 @@ function App() {
             setQuestions(response.data);
             setQuizState('in_progress');
             setCurrentQuestionIndex(0);
-            setSelectedAnswers({});
+            setSelectedAnswers([]); // <-- ADD THIS LINE
+
         } catch (err) {
             handleApiError(err, `Failed to load quiz for ${topicNameToStart || 'General'}.`);
             setQuizState('topic_detail');
@@ -337,35 +447,14 @@ function App() {
         setShowChat(false); setShowChatList(false); setActiveChatUser(null);
         setQuizState('dashboard');
         setQuestions([]); setQuizResult(null); setPublicProfileData(null); setSearchQuery(''); setSearchResults([]); setError(null); setShowFollowersList(false); setShowFollowingList(false);
+        setSelectedAnswers([]); // <-- ADD THIS LINE
     };
     const backToTopicDetail = () => {
         setQuizState('topic_detail');
         setQuestions([]);
         setQuizResult(null);
+        setSelectedAnswers([]); // <-- ADD THIS LINE
     };
-    const handleSubmit = useCallback(async () => {
-        setIsLoading(true); setError(null);
-        const submittedTopic = questions.length > 0 ? (questions[0]?.topic || selectedTopic || "Unknown") : (selectedTopic || "Unknown");
-        try {
-            const response = await api.post('/api/quiz/submit', selectedAnswers);
-            const resultData = response.data;
-
-            setQuizResult({ ...resultData, topic: submittedTopic });
-            setQuizState('finished');
-            setShowChat(false); setShowChatList(false); setActiveChatUser(null);
-            fetchMyProfile();
-
-            if (resultData.newTitles && resultData.newTitles.length > 0) {
-                setNewTitleToast(resultData.newTitles);
-            }
-
-        }
-        catch (err) { handleApiError(err, 'Failed to submit answers.'); } finally { setIsLoading(false); }
-    }, [questions, selectedTopic, selectedAnswers, fetchMyProfile, handleApiError]);
-
-    const handleAnswerSelect = (option) => { if (!questions || questions.length === 0) return; const q = questions[currentQuestionIndex]; if (q) setSelectedAnswers(prev => ({ ...prev, [q.id]: option })); };
-    const handleNext = () => { if (questions && currentQuestionIndex < questions.length - 1) setCurrentQuestionIndex(prev => prev + 1); };
-    const handlePrevious = () => { if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev + 1); };
 
     // --- Social Handlers ---
     const handleSearch = useCallback(async (e) => {
@@ -527,8 +616,6 @@ function App() {
                                         <UserPlaceholderIcon />
                                     </div>
                                 )}
-
-                                {/* --- ACHIEVEMENT BADGES REMOVED --- */}
                             </div>
 
                             {/* --- Upload Overlay --- */}
@@ -732,10 +819,9 @@ function App() {
     const renderQuizScreen = () => {
         const actualQuizTopic = questions.length > 0 ? (questions[0]?.topic || selectedTopic || "Unknown") : (selectedTopic || "Unknown");
         if (!questions || questions.length === 0) return (<div className="text-center py-10"><LoadingSpinner /><p className="mt-2 text-gray-600">Loading questions...</p><button onClick={backToTopicDetail} className="mt-4 px-4 py-2 bg-primary text-white rounded-md shadow hover:bg-primary-dark transition">Back to Topic</button></div>);
-        if (currentQuestionIndex < 0 || currentQuestionIndex >= questions.length) return <div>Error loading question index. <button onClick={backToTopicDetail}>Back to Topic</button></div>;
         const question = questions[currentQuestionIndex]; if (!question) return <div>Error loading question data. <button onClick={backToTopicDetail}>Back to Topic</button></div>;
-        const selectedOption = selectedAnswers[question.id]; const isLastQuestion = currentQuestionIndex === questions.length - 1;
-        const progressPercentage = ((currentQuestionIndex + 1) / questions.length) * 100;
+
+        const timerPercentage = (timer / 10) * 100;
 
         return (
             <div className="w-full animate-fade-in">
@@ -743,12 +829,17 @@ function App() {
                     <ArrowLeftIcon /> Back to Topic
                 </button>
                 <div className="mb-6 pt-8">
-                    <div className="flex justify-between items-center mb-2 text-sm">
+                    <div className="flex justify-between items-center mb-1 text-sm">
                         <span className="font-semibold px-2 py-0.5 rounded-full text-primary-dark bg-red-100">Question {currentQuestionIndex + 1}/{questions.length}</span>
-                        <span className="font-semibold px-2 py-0.5 rounded-full text-gray-600 bg-gray-200 capitalize">Topic: {actualQuizTopic}</span>
+                        <span className="font-semibold px-2 py-0.5 rounded-full text-gray-600 bg-gray-200 capitalize">{actualQuizTopic}</span>
+                        <span className="font-bold text-lg text-primary">{Math.ceil(timer)}s</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div className="bg-primary h-2 rounded-full transition-all duration-300 ease-linear" style={{ width: `${progressPercentage}%` }}></div>
+                    {/* --- NEW: Timer Bar --- */}
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div
+                            className="bg-primary h-2.5 rounded-full transition-all duration-100 ease-linear"
+                            style={{ width: `${timerPercentage}%` }}
+                        ></div>
                     </div>
                 </div>
                 {question.imageUrl && (
@@ -762,27 +853,17 @@ function App() {
                         question[`option${option}`] !== undefined && question[`option${option}`] !== null &&
                         <button
                             key={option}
-                            onClick={() => handleAnswerSelect(option)}
-                            className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 text-base flex items-center group focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${selectedOption === option
-                                ? 'bg-primary border-primary-dark text-white font-semibold shadow-md ring-2 ring-offset-1 ring-primary-dark'
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-red-50 hover:border-primary'
-                            }`}
+                            onClick={() => handleAnswerSelect(option)} // This function now handles everything
+                            className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 text-base flex items-center group focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary 
+                                bg-white border-gray-300 text-gray-700 hover:bg-red-50 hover:border-primary
+                            `}
                         >
-                            <span className={`font-bold mr-3 rounded-full border w-6 h-6 flex items-center justify-center text-xs transition-colors ${selectedOption === option ? 'border-white text-white bg-primary-dark' : 'border-gray-400 text-gray-500 group-hover:border-primary group-hover:text-primary'}`}>{option}</span>
+                            <span className={`font-bold mr-3 rounded-full border w-6 h-6 flex items-center justify-center text-xs transition-colors border-gray-400 text-gray-500 group-hover:border-primary group-hover:text-primary`}>{option}</span>
                             {question[`option${option}`]}
                         </button>
                     ))}
                 </div>
-                <div className="flex justify-between mt-8">
-                    <button onClick={handlePrevious} disabled={currentQuestionIndex === 0} className="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-md shadow-sm hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Previous</button>
-                    {isLastQuestion ? (
-                        <button onClick={handleSubmit} disabled={isLoading || isSubmitting} className="px-6 py-2 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex items-center justify-center min-w-[120px]">
-                            {isLoading || isSubmitting ? <LoadingSpinner /> : 'Submit Quiz'}
-                        </button>
-                    ) : (
-                        <button onClick={handleNext} className="px-6 py-2 bg-primary text-white font-semibold rounded-md shadow-sm hover:bg-primary-dark transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">Next</button>
-                    )}
-                </div>
+                {/* --- REMOVED Next/Previous/Submit buttons --- */}
                 {error && <p className="text-red-600 text-sm mt-4 text-center">{error}</p>}
             </div>
         );
@@ -790,8 +871,8 @@ function App() {
 
     // --- renderResultScreen ---
     const renderResultScreen = () => {
-        const { score, totalQuestions, topic, newAchievements, newTitles } = quizResult || {};
-        const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+        const { score, totalQuestions, maxScore, topic, newTitles } = quizResult || {};
+        const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
         return (
             <div className="text-center animate-fade-in py-8">
@@ -813,9 +894,10 @@ function App() {
                     </div>
                 )}
 
+                {/* --- UPDATED Score Display --- */}
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6 inline-block shadow-md mb-8">
-                    <p className="text-xl text-gray-700 mb-1">Your Score:</p>
-                    <p className="text-5xl font-bold text-primary mb-2">{score} / {totalQuestions}</p>
+                    <p className="text-xl text-gray-700 mb-1">Your Score (out of {maxScore}) - {totalQuestions} questions:</p>
+                    <p className="text-5xl font-bold text-primary mb-2">{score}</p>
                     <p className="text-2xl font-semibold text-gray-800">({percentage}%)</p>
                 </div>
                 <button onClick={backToTopicDetail} className="w-full sm:w-auto px-8 py-3 bg-primary text-white font-bold rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-200 transform hover:scale-105">
@@ -1081,7 +1163,7 @@ function App() {
         if (!toastContent) return null;
 
         return (
-            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md p-4">
+            <div className="fixed bottom-20 left-1/2 -translate-x-1.2 z-[100] w-full max-w-md p-4">
                 <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 animate-fade-in">
                     {toastContent}
                 </div>

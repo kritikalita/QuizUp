@@ -1,9 +1,6 @@
 package com.quizapp.controller;
 
-import com.quizapp.dto.LeaderboardEntryDTO;
-import com.quizapp.dto.QuestionDTO;
-import com.quizapp.dto.QuizResultDTO;
-import com.quizapp.dto.TopicInfoDTO;
+import com.quizapp.dto.*;
 import com.quizapp.service.QuizService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +31,7 @@ public class QuizController {
 
     // This endpoint remains the same
     @PostMapping("/submit")
-    public ResponseEntity<QuizResultDTO> submitQuiz(@RequestBody Map<Long, String> answers) {
+    public ResponseEntity<QuizResultDTO> submitQuiz(@RequestBody List<SubmittedAnswerDTO> answers) { // <-- USE THE NEW DTO
         return ResponseEntity.ok(quizService.calculateScore(answers));
     }
 

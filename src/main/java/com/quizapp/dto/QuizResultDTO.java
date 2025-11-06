@@ -1,4 +1,3 @@
-// src/main/java/com/quizapp/dto/QuizResultDTO.java
 package com.quizapp.dto;
 
 import java.util.Set;
@@ -6,13 +5,14 @@ import java.util.Set;
 public class QuizResultDTO {
     private int score;
     private int totalQuestions;
-    // --- REMOVED newAchievements ---
+    private int maxScore;
     private Set<String> newTitles;
 
-    // --- MODIFIED CONSTRUCTOR ---
-    public QuizResultDTO(int score, int totalQuestions, Set<String> newTitles) {
+    // --- CONSTRUCTOR ---
+    public QuizResultDTO(int score, int totalQuestions, int maxScore, Set<String> newTitles) {
         this.score = score;
         this.totalQuestions = totalQuestions;
+        this.maxScore = maxScore;
         this.newTitles = newTitles;
     }
 
@@ -29,13 +29,11 @@ public class QuizResultDTO {
     public void setTotalQuestions(int totalQuestions) {
         this.totalQuestions = totalQuestions;
     }
-
-    // --- REMOVED getNewAchievements / setNewAchievements ---
-
     public Set<String> getNewTitles() {
         return newTitles;
     }
-    public void setNewTitles(Set<String> newTitles) {
-        this.newTitles = newTitles;
-    }
+    public void setNewTitles(Set<String> newTitles) {this.newTitles = newTitles;}
+    public int getMaxScore() { return maxScore; }
+    public void setMaxScore(int maxScore) { this.maxScore = maxScore; }
+
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/quizapp/service/ProfileService.java
 package com.quizapp.service;
 
 import com.quizapp.dto.*;
@@ -12,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // <-- Make sure this is imported
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,14 +19,22 @@ import java.util.stream.Collectors;
 @Service
 public class ProfileService {
 
+    private final UserRepository userRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final UserTopicProgressRepository progressRepository;
+    private final XPService xpService;
+
+    // Add this constructor
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private QuizAttemptRepository quizAttemptRepository;
-    @Autowired
-    private UserTopicProgressRepository progressRepository;
-    @Autowired
-    private XPService xpService;
+    public ProfileService(UserRepository userRepository,
+                          QuizAttemptRepository quizAttemptRepository,
+                          UserTopicProgressRepository progressRepository,
+                          XPService xpService) {
+        this.userRepository = userRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
+        this.progressRepository = progressRepository;
+        this.xpService = xpService;
+    }
 
     @Transactional(readOnly = true)
     public UserProfileDTO getUserProfile(String username) {
@@ -45,8 +52,8 @@ public class ProfileService {
                 .sum();
         double averageScore = (totalQuizzes > 0 && totalScore > 0) ? (totalScore / totalQuizzes) * 100 : 0;
 
-        profileUser.getFollowers().size();
-        profileUser.getFollowing().size();
+//        profileUser.getFollowers().size();
+//        profileUser.getFollowing().size();
         int followersCount = profileUser.getFollowers().size();
         int followingCount = profileUser.getFollowing().size();
         boolean isFollowed = profileUser.getFollowers().contains(currentUser);
@@ -104,10 +111,10 @@ public class ProfileService {
     @Transactional
     public void updateCountryCode(String username, String countryCode) {
         QuizUser user = userRepository.findByUsername(username)
+                // --- THIS IS THE CORRECTED LINE ---
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         user.setCountryCode(countryCode);
         userRepository.save(user);
     }
-
 }

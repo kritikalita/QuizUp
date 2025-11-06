@@ -1,4 +1,3 @@
-// src/main/java/com/quizapp/dto/UserTopicProgressDTO.java
 package com.quizapp.dto;
 
 import lombok.AllArgsConstructor;

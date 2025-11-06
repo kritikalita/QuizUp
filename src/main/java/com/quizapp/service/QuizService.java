@@ -1,10 +1,6 @@
-// src/main/java/com/quizapp/service/QuizService.java
 package com.quizapp.service;
 
-import com.quizapp.dto.LeaderboardEntryDTO;
-import com.quizapp.dto.QuestionDTO;
-import com.quizapp.dto.QuizResultDTO;
-import com.quizapp.dto.TopicInfoDTO;
+import com.quizapp.dto.*;
 import com.quizapp.model.Question;
 import com.quizapp.model.QuizAttempt;
 import com.quizapp.model.QuizUser;
@@ -42,10 +38,12 @@ public class QuizService {
     private XPService xpService;
 
     public List<QuestionDTO> getQuizQuestionsByTopic(String topic) {
-        // ... (method content remains the same) ...
         List<Question> questionsByTopic = questionRepository.findByTopic(topic);
+        // Shuffle the full list
         Collections.shuffle(questionsByTopic);
+        // Now, only take the first 7 to send to the frontend
         return questionsByTopic.stream()
+                .limit(7) // <-- THIS IS THE FIX. MAKE SURE THIS LINE EXISTS.
                 .map(question -> new QuestionDTO(
                         question.getId(),
                         question.getQuestionText(),
@@ -75,43 +73,69 @@ public class QuizService {
     }
 
     @Transactional
-    public QuizResultDTO calculateScore(Map<Long, String> answers) {
-        int score = 0;
-        List<Question> questions = questionRepository.findAllById(answers.keySet());
+    public QuizResultDTO calculateScore(List<SubmittedAnswerDTO> answers) {
+        // --- NEW SCORING LOGIC ---
+        final int TIME_LIMIT_SEC = 10;
 
-        for (Question question : questions) {
-            String correctAnswer = question.getCorrectAnswer();
-            String userAnswer = answers.get(question.getId());
-            if (correctAnswer != null && correctAnswer.equals(userAnswer)) {
-                score++;
+        int totalScore = 0;
+        int questionsCorrect = 0;
+        int maxPossibleScore = 0;
+
+        for (int i = 0; i < answers.size(); i++) {
+            SubmittedAnswerDTO answer = answers.get(i);
+            Question question = questionRepository.findById(answer.getQuestionId()).orElse(null);
+
+            if (question == null) continue;
+
+            // Check if this is Question 1-6 or the final 7th question
+            final boolean isFinalQuestion = (i == (answers.size() - 1));
+            final int MAX_POINTS_PER_Q = isFinalQuestion ? 40 : 20;
+            final int MIN_POINTS_PER_Q = isFinalQuestion ? 10 : 5;  // Proportional min points
+            final double POINTS_PER_SECOND = (double) (MAX_POINTS_PER_Q - MIN_POINTS_PER_Q) / TIME_LIMIT_SEC;
+
+            maxPossibleScore += MAX_POINTS_PER_Q;
+
+            if (answer.getAnswer() != null && question.getCorrectAnswer().equals(answer.getAnswer())) {
+                // --- Correct Answer! Calculate points ---
+                questionsCorrect++;
+                double timeElapsed = Math.min(answer.getTimeElapsed(), TIME_LIMIT_SEC);
+
+                int pointsLost = (int) Math.floor(timeElapsed * POINTS_PER_SECOND);
+                int earnedPoints = Math.max(MIN_POINTS_PER_Q, MAX_POINTS_PER_Q - pointsLost);
+
+                totalScore += earnedPoints;
             }
+            // else: Wrong answer or timeout (answer.getAnswer() == null), 0 points added
         }
+                // --- END NEW SCORING LOGIC ---
+
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         QuizUser currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        String topic = questions.isEmpty() ? "Unknown" : questions.get(0).getTopic();
+        // Get topic from the first question
+        String topic = "Unknown";
+        if (!answers.isEmpty()) {
+            topic = questionRepository.findById(answers.get(0).getQuestionId())
+                    .map(Question::getTopic)
+                    .orElse("Unknown");
+        }
 
         QuizAttempt attempt = new QuizAttempt();
         attempt.setUser(currentUser);
         attempt.setTopic(topic);
-        attempt.setScore(score);
-        attempt.setTotalQuestions(questions.size());
+        attempt.setScore(totalScore);
+        attempt.setTotalQuestions(answers.size());
         attempt.setAttemptedAt(LocalDateTime.now());
         quizAttemptRepository.save(attempt);
 
-        // --- REMOVED Achievement check ---
+        Set<String> newTitles = xpService.addXp(currentUser, topic, questionsCorrect, answers.size());
 
-        // Add XP and check for level-ups/titles
-        Set<String> newTitles = xpService.addXp(currentUser, topic, score, questions.size());
-
-        // --- MODIFIED RETURN (removed newAchievements) ---
-        return new QuizResultDTO(score, questions.size(), newTitles);
+        return new QuizResultDTO(totalScore, answers.size(), maxPossibleScore, newTitles);
     }
 
     public List<LeaderboardEntryDTO> getLeaderboardForTopic(String topicName, int limit) {
-        // ... (method content remains the same) ...
         List<QuizAttempt> topAttempts = quizAttemptRepository.findTopScoresByTopic(topicName);
         return topAttempts.stream()
                 .limit(limit)
