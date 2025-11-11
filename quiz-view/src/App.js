@@ -254,12 +254,12 @@ function App() {
     // --- QUIZ LOGIC FUNCTIONS (MOVED TO TOP) ---
 
     // --- MODIFIED handleSubmit ---
-    const handleSubmit = useCallback(async (finalAnswerPayload) => { // <-- Renamed param
+    const handleSubmit = useCallback(async (answers, finalAnswerPayload) => { // <-- 1. Add `answers`
         setIsLoading(true); setError(null);
         if (timerIntervalId.current) clearInterval(timerIntervalId.current);
 
         // Combine the answers in state with the very last answer that triggered this submit
-        const finalAnswers = [...selectedAnswers, finalAnswerPayload]; // <-- Build final array
+        const finalAnswers = [...answers, finalAnswerPayload]; // <-- 2. Use the `answers` argument
 
         const submittedTopic = questions.length > 0 ? (questions[0]?.topic || selectedTopic || "Unknown") : "Unknown";
         try {
@@ -278,55 +278,51 @@ function App() {
         }
         catch (err) { handleApiError(err, 'Failed to submit answers.'); }
         finally { setIsLoading(false); }
-    }, [questions, selectedTopic, selectedAnswers, fetchMyProfile, handleApiError]); // <-- Updated dependencies
+    }, [questions, selectedTopic, fetchMyProfile, handleApiError]); // <-- 3. Remove `selectedAnswers`
 
     // --- NEW: This function handles a question timeout ---
     const handleTimeout = useCallback(() => {
-        // We MUST use updaters here because this function is called
-        // from a stale closure inside setInterval.
-        setCurrentQuestionIndex(prevIndex => {
-            const q = questions[prevIndex];
-            if (!q) return prevIndex; // No change
-
-            const answerPayload = { questionId: q.id, answer: null, timeElapsed: 10 }; // <-- Add questionId
-
-            if (prevIndex === questions.length - 1) {
-                // Last question timed out, submit
-                handleSubmit(answerPayload); // <-- Pass final answer
-                return prevIndex; // No index change
-            } else {
-                // Record timeout and move to next question
-                setSelectedAnswers(prev => [...prev, answerPayload]); // <-- Add to array
-                return prevIndex + 1; // Move to next question
-            }
-        });
-    }, [questions, handleSubmit]); // No longer depends on handleNext or currentQuestionIndex
-
-    // --- MODIFIED: This function now handles selecting an answer AND moving next ---
-    const handleAnswerSelect = useCallback((option) => {
-        if (timerIntervalId.current) clearInterval(timerIntervalId.current); // <-- Use .current
-        const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
-
-        // Use updater form to avoid stale state
         setCurrentQuestionIndex(prevIndex => {
             const q = questions[prevIndex];
             if (!q) return prevIndex;
 
-            const answerPayload = { questionId: q.id, answer: option, timeElapsed: elapsedSeconds }; // <-- Add questionId
+            const answerPayload = { questionId: q.id, answer: null, timeElapsed: 10 };
 
             if (prevIndex === questions.length - 1) {
-                // This is the last question, trigger submit
-                handleSubmit(answerPayload); // <-- Pass final answer
-                return prevIndex; // No index change
+                // This MUST also pass selectedAnswers
+                handleSubmit(selectedAnswers, answerPayload); // <-- 1. Pass state
+                return prevIndex;
             } else {
-                // Not the last question, save answer and move next
-                setSelectedAnswers(prev => [...prev, answerPayload]); // <-- Add to array
-                return prevIndex + 1; // Move to next question
+                setSelectedAnswers(prev => [...prev, answerPayload]);
+                return prevIndex + 1;
             }
         });
-    }, [questions, handleSubmit]); // <-- Removed timerIntervalId and handleNext
+    }, [questions, handleSubmit, selectedAnswers]); // <-- 2. Add dependency
 
+
+    // --- MODIFIED: This function now handles selecting an answer AND moving next ---
+    const handleAnswerSelect = useCallback((option) => {
+        if (timerIntervalId.current) clearInterval(timerIntervalId.current);
+        const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
+
+        setCurrentQuestionIndex(prevIndex => {
+            const q = questions[prevIndex];
+            if (!q) return prevIndex;
+
+            const answerPayload = { questionId: q.id, answer: option, timeElapsed: elapsedSeconds };
+
+            if (prevIndex === questions.length - 1) {
+                // This MUST pass selectedAnswers as the first argument
+                handleSubmit(selectedAnswers, answerPayload); // <-- 1. Pass state
+                return prevIndex;
+            } else {
+                setSelectedAnswers(prev => [...prev, answerPayload]);
+                return prevIndex + 1;
+            }
+        });
+    }, [questions, handleSubmit, selectedAnswers]); // <-- 2. Add dependency
     // --- END OF QUIZ LOGIC FUNCTIONS ---
+
 
 
     // --- Main useEffect ---
@@ -435,6 +431,7 @@ function App() {
             setQuizState('in_progress');
             setCurrentQuestionIndex(0);
             setSelectedAnswers([]); // <-- ADD THIS LINE
+            console.log("!!! QUIZ STARTED, ANSWERS CLEARED !!!"); // <-- ADD THIS LINE
 
         } catch (err) {
             handleApiError(err, `Failed to load quiz for ${topicNameToStart || 'General'}.`);

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set; // This import might be unused now, which is fine
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,18 +32,16 @@ public class QuizService {
     @Autowired
     private QuizAttemptRepository quizAttemptRepository;
 
-    // --- REMOVED AchievementService injection ---
-
     @Autowired
     private XPService xpService;
 
     public List<QuestionDTO> getQuizQuestionsByTopic(String topic) {
         List<Question> questionsByTopic = questionRepository.findByTopic(topic);
-        // Shuffle the full list
         Collections.shuffle(questionsByTopic);
-        // Now, only take the first 7 to send to the frontend
+
+        // GUARD 1: Limit fetch to 7 questions max
         return questionsByTopic.stream()
-                .limit(7) // <-- THIS IS THE FIX. MAKE SURE THIS LINE EXISTS.
+                .limit(7)
                 .map(question -> new QuestionDTO(
                         question.getId(),
                         question.getQuestionText(),
@@ -57,7 +55,6 @@ public class QuizService {
     }
 
     public List<TopicInfoDTO> getAllTopics() {
-        // ... (method content remains the same) ...
         List<Question> allQuestions = questionRepository.findAll();
         Map<String, String> topicToLogoMap = allQuestions.stream()
                 .map(q -> new TopicInfoDTO(q.getTopic(), q.getTopicLogoUrl()))
@@ -74,47 +71,49 @@ public class QuizService {
 
     @Transactional
     public QuizResultDTO calculateScore(List<SubmittedAnswerDTO> answers) {
-        // --- NEW SCORING LOGIC ---
         final int TIME_LIMIT_SEC = 10;
 
         int totalScore = 0;
         int questionsCorrect = 0;
         int maxPossibleScore = 0;
 
-        for (int i = 0; i < answers.size(); i++) {
+        // GUARD 2: STRICTLY limit scoring to the first 7 answers only.
+        // unexpected extra answers from the frontend are ignored.
+        int answersToProcess = Math.min(answers.size(), 7);
+
+        for (int i = 0; i < answersToProcess; i++) {
             SubmittedAnswerDTO answer = answers.get(i);
             Question question = questionRepository.findById(answer.getQuestionId()).orElse(null);
 
             if (question == null) continue;
 
-            // Check if this is Question 1-6 or the final 7th question
-            final boolean isFinalQuestion = (i == (answers.size() - 1));
-            final int MAX_POINTS_PER_Q = isFinalQuestion ? 40 : 20;
-            final int MIN_POINTS_PER_Q = isFinalQuestion ? 10 : 5;  // Proportional min points
-            final double POINTS_PER_SECOND = (double) (MAX_POINTS_PER_Q - MIN_POINTS_PER_Q) / TIME_LIMIT_SEC;
+            // GUARD 3: Bonus ONLY applies to the 7th question (index 6).
+            // 5-question quizzes will NEVER get a bonus.
+            final boolean isBonusQuestion = (i == 6);
+
+            final int MAX_POINTS_PER_Q = isBonusQuestion ? 40 : 20;
+            final int MIN_POINTS_PER_Q = isBonusQuestion ? 10 : 5;
+            // Protect against division by zero if TIME_LIMIT_SEC is changed later
+            final double POINTS_PER_SECOND = (TIME_LIMIT_SEC > 0) ? (double) (MAX_POINTS_PER_Q - MIN_POINTS_PER_Q) / TIME_LIMIT_SEC : 0;
 
             maxPossibleScore += MAX_POINTS_PER_Q;
 
             if (answer.getAnswer() != null && question.getCorrectAnswer().equals(answer.getAnswer())) {
-                // --- Correct Answer! Calculate points ---
                 questionsCorrect++;
-                double timeElapsed = Math.min(answer.getTimeElapsed(), TIME_LIMIT_SEC);
+                // Ensure time elapsed is within valid bounds [0, 10]
+                double timeElapsed = Math.max(0, Math.min(answer.getTimeElapsed(), TIME_LIMIT_SEC));
 
                 int pointsLost = (int) Math.floor(timeElapsed * POINTS_PER_SECOND);
                 int earnedPoints = Math.max(MIN_POINTS_PER_Q, MAX_POINTS_PER_Q - pointsLost);
 
                 totalScore += earnedPoints;
             }
-            // else: Wrong answer or timeout (answer.getAnswer() == null), 0 points added
         }
-                // --- END NEW SCORING LOGIC ---
-
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         QuizUser currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        // Get topic from the first question
         String topic = "Unknown";
         if (!answers.isEmpty()) {
             topic = questionRepository.findById(answers.get(0).getQuestionId())
@@ -126,13 +125,13 @@ public class QuizService {
         attempt.setUser(currentUser);
         attempt.setTopic(topic);
         attempt.setScore(totalScore);
-        attempt.setTotalQuestions(answers.size());
+        attempt.setTotalQuestions(answersToProcess); // Use the processed count, not the raw size
         attempt.setAttemptedAt(LocalDateTime.now());
         quizAttemptRepository.save(attempt);
 
-        Set<String> newTitles = xpService.addXp(currentUser, topic, questionsCorrect, answers.size());
+        Set<String> newTitles = xpService.addXp(currentUser, topic, questionsCorrect, answersToProcess);
 
-        return new QuizResultDTO(totalScore, answers.size(), maxPossibleScore, newTitles);
+        return new QuizResultDTO(totalScore, answersToProcess, maxPossibleScore, newTitles);
     }
 
     public List<LeaderboardEntryDTO> getLeaderboardForTopic(String topicName, int limit) {
